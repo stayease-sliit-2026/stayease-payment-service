@@ -1,0 +1,114 @@
+{
+  "info": {
+    "_postman_id": "d8709f5a-0db9-4ec8-8eaf-1f48f83f1f23",
+    "name": "StayEase Payment Service",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["health"]
+        }
+      }
+    },
+    {
+      "name": "Create Payment",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"bookingId\": \"BK1001\",\n  \"userId\": \"USR1001\",\n  \"amount\": 25000,\n  \"currency\": \"LKR\",\n  \"contact\": {\n    \"channel\": \"email\",\n    \"destination\": \"user@example.com\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/payments",
+          "host": ["{{baseUrl}}"],
+          "path": ["payments"]
+        }
+      }
+    },
+    {
+      "name": "Get Payment By Booking ID",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/payments/BK1001",
+          "host": ["{{baseUrl}}"],
+          "path": ["payments", "BK1001"]
+        }
+      }
+    },
+    {
+      "name": "Refund Payment",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"bookingId\": \"BK1001\",\n  \"reason\": \"Customer cancelled\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/payments/refund",
+          "host": ["{{baseUrl}}"],
+          "path": ["payments", "refund"]
+        }
+      }
+    },
+    {
+      "name": "Send Internal Notification",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "x-internal-service-key", "value": "{{internalServiceKey}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"userId\": \"USR1001\",\n  \"bookingId\": \"BK1001\",\n  \"paymentId\": \"PAY1001\",\n  \"channel\": \"email\",\n  \"destination\": \"user@example.com\",\n  \"message\": \"Your payment was successful\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/notifications/send",
+          "host": ["{{baseUrl}}"],
+          "path": ["notifications", "send"]
+        }
+      }
+    },
+    {
+      "name": "Notification History",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/notifications/history?userId=USR1001",
+          "host": ["{{baseUrl}}"],
+          "path": ["notifications", "history"],
+          "query": [
+            { "key": "userId", "value": "USR1001" }
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:4004" },
+    { "key": "token", "value": "demo-token" },
+    { "key": "internalServiceKey", "value": "replace-this-with-strong-random-value" }
+  ]
+}

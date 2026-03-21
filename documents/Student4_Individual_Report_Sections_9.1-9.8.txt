@@ -1,0 +1,244 @@
+9.1 Introduction
+
+My assigned component in the StayEase system is the Payment and Notification Service. This microservice is responsible for processing booking payments, issuing refunds, and recording/sending payment-related notifications (email/SMS). The service supports the overall booking lifecycle by ensuring that every confirmed booking can transition through a payment workflow with traceable transaction status updates.
+
+This service plays a critical role in the full platform because:
+- It is invoked by the Booking Service to process financial actions.
+- It validates identity through the Auth Service before protected operations.
+- It provides payment status APIs that other services and the frontend can query.
+- It maintains notification history to support user communication and auditability.
+
+The implementation is developed using Node.js (Express), MongoDB Atlas, Docker, GitHub Actions CI/CD, and SonarCloud for DevSecOps support.
+
+
+9.2 Architecture & Design
+
+The service is designed using a layered microservice architecture:
+- Routes layer: API endpoint definitions and middleware chaining.
+- Controllers layer: request/response orchestration.
+- Services layer: business logic and external service integration.
+- Models layer: MongoDB schema definitions.
+- Middleware layer: authentication, internal authorization, validation, and error handling.
+
+Design decisions and rationale:
+1. Separation of concerns: each layer has a single responsibility, improving maintainability and testability.
+2. Database-per-service principle: Payment and Notification data are isolated in this service domain.
+3. Externalized configuration: runtime behavior controlled through environment variables for secure deployment.
+4. Secure-by-default middleware pipeline: bearer token checks on protected routes and an internal key for internal-only notification operations.
+5. Validation-first request handling: express-validator is applied before business logic execution.
+
+Core entities:
+- Payment: bookingId, userId, amount, currency, status (pending/success/failed/refunded), transactionId, timestamps.
+- Notification: userId, bookingId, paymentId, channel, destination, message, status, timestamps.
+
+
+9.3 API Endpoints
+
+Implemented endpoints:
+1. GET /health
+- Purpose: Service health check.
+- Auth: No.
+- Response: service status and timestamp.
+
+2. POST /payments
+- Purpose: Process a payment for a booking.
+- Auth: Bearer token required.
+- Request fields: bookingId, userId, amount, currency, optional contact object.
+- Response: created payment object and status.
+
+3. GET /payments/:bookingId
+- Purpose: Retrieve payment status for a booking.
+- Auth: Bearer token required.
+- Response: latest payment state for the booking.
+
+4. POST /payments/refund
+- Purpose: Issue a refund for a booking.
+- Auth: Bearer token required.
+- Request fields: bookingId, optional reason.
+- Response: updated payment status = refunded.
+
+5. POST /notifications/send
+- Purpose: Internal service-to-service notification creation.
+- Auth: Internal key required via x-internal-service-key.
+- Request fields: userId, bookingId, paymentId, channel, destination, message.
+- Response: created notification record.
+
+6. GET /notifications/history
+- Purpose: Retrieve notification history for a user.
+- Auth: Bearer token required.
+- Query: userId (optional when derived from authenticated identity).
+- Response: array of notification records.
+
+The full API contract is documented in swagger.yaml.
+
+
+9.4 Inter-Service Communication
+
+This microservice integrates with at least one other microservice as required.
+
+A. Outbound integration
+- Payment Service calls Auth Service endpoint GET /auth/verify to validate bearer tokens.
+- This occurs in authentication middleware before protected handlers run.
+
+B. Inbound integration
+- Booking Service calls POST /payments after booking confirmation.
+- Booking/Frontend can call GET /payments/:bookingId to fetch status.
+
+C. Internal communication pattern
+- After successful payment creation, the payment logic triggers notification creation logic.
+- Internal notification endpoint is guarded by internal service key to prevent unauthorized external use.
+
+Validated integration evidence:
+- End-to-end smoke flow succeeded: payment create -> payment fetch -> internal notification -> history fetch -> refund.
+
+
+9.5 DevOps Practices
+
+Version control and repository practices:
+- Source code is structured for collaborative development with clear modular separation.
+- Required deliverables are included: codebase, API contract, Docker assets, CI/CD definitions.
+
+Continuous Integration (CI):
+- GitHub Actions CI pipeline includes:
+  1. Checkout source
+  2. Install dependencies
+  3. Lint check (zero warnings)
+  4. Automated tests with coverage
+  5. Docker build verification
+  6. SonarCloud scan (when SONAR_TOKEN is configured)
+
+Continuous Deployment (CD):
+- Additional workflow added for cloud deployment:
+  1. Build Docker image
+  2. Push image to Docker Hub
+  3. Deploy image to Azure Container Apps using deployment YAML
+
+Containerization:
+- Dockerfile provided for service image build and runtime.
+- docker-compose provided for local multi-container development.
+
+Cloud readiness:
+- Deployment manifest for Azure Container Apps included.
+- Environment variables and secrets mapped for cloud runtime configuration.
+
+
+9.6 Security Measures
+
+Application-level security controls:
+1. Bearer token authentication for protected endpoints.
+2. Internal service key authorization for internal notification route.
+3. Input validation with express-validator on request payloads and parameters.
+4. Security headers via Helmet middleware.
+5. CORS configuration for service communication.
+6. Secret/config management via environment variables (.env ignored in git).
+
+Data protection and least privilege concepts:
+- Sensitive credentials are not hardcoded in source code.
+- Internal operations are separated from public routes.
+- Only required fields are accepted through strict validation rules.
+
+DevSecOps controls:
+- SonarCloud configuration included and wired into CI flow.
+- Linting and test gates reduce the chance of vulnerable/unreliable code reaching deployment.
+
+Cloud security implementation approach:
+- Managed container platform deployment with secret references.
+- HTTPS ingress enabled in deployment manifest.
+- Additional cloud-side controls (IAM role assignment, network restrictions) are configured at deployment stage and must be shown during viva.
+
+
+9.7 Challenges & Solutions
+
+Challenge 1: Reliable local integration without full team services always available.
+- Solution: Implemented a mock Auth service for isolated integration and repeatable testing.
+
+Challenge 2: Ensuring code quality while moving fast.
+- Solution: Enforced strict ESLint rule with max-warnings=0 and added automated API tests.
+
+Challenge 3: End-to-end verification confidence.
+- Solution: Added smoke integration script that validates a complete transaction sequence.
+
+Challenge 4: Cloud/DevOps completeness for rubric.
+- Solution: Added CI enhancements for SonarCloud, created CD workflow for Azure Container Apps, and added container app deployment manifest.
+
+Challenge 5: Secure internal operations.
+- Solution: Introduced internal service key middleware for notification send endpoint and maintained bearer auth for user-facing operations.
+
+
+9.8 Conclusion
+
+The Payment and Notification Service is fully developed as an independently deployable microservice and is integrated into the StayEase architecture. It satisfies core backend functional requirements through secure payment processing, status retrieval, refund support, and notification tracking.
+
+The implementation demonstrates key assignment outcomes:
+- Working microservice functionality with validated endpoint behavior.
+- Inter-service communication with Auth and Booking flows.
+- DevOps readiness through CI/CD, Dockerization, and cloud deployment assets.
+- Security and DevSecOps practices through auth controls, input validation, secret management, and SonarCloud integration.
+
+Final validation status in this component:
+- Lint: passed with zero warnings.
+- Automated tests: all passing.
+- End-to-end smoke integration: successful.
+
+This component is ready for final cloud deployment evidence capture and viva demonstration.
+
+
+Assignment Requirement Compliance Checklist (Student 4 Component)
+
+The following table maps the assignment requirements to current evidence in this component.
+
+1. Design a Simple Microservice (LO1, LO3)
+- Status: Satisfied
+- Evidence:
+  - Functional endpoints and role definition covered in sections 9.1 and 9.3.
+  - API contract available in swagger.yaml.
+
+2. Implement Basic DevOps Practices (LO1, LO2)
+- Status: Satisfied at implementation level, evidence capture pending for final viva screenshots
+- Evidence:
+  - CI workflow: .github/workflows/ci.yml
+  - CD workflow: .github/workflows/cd-azure-containerapp.yml
+  - Version-controlled source structure and pipeline files included in repository.
+
+3. Containerize the Microservice using Docker (LO3, LO4)
+- Status: Satisfied
+- Evidence:
+  - Dockerfile exists and builds successfully.
+  - docker-compose.yml supports local containerized execution.
+
+4. Deploy the Microservice on Managed Cloud (LO2, LO4)
+- Status: Partially satisfied (deployment artifacts complete; final live cloud proof required)
+- Evidence:
+  - Azure deployment manifest: infra/azure/containerapp.yaml
+  - CD deployment workflow prepared for Azure Container Apps.
+- Still required for report finalization:
+  - Public HTTPS URL screenshot
+  - Successful deployment workflow run screenshot
+  - Cloud console screenshot showing active deployment revision
+
+5. Integrate Basic Security + DevSecOps (LO2, LO4)
+- Status: Satisfied at code/pipeline level, cloud-side evidence pending
+- Evidence:
+  - Bearer auth middleware and internal service key route protection
+  - Request validation and secure environment variable usage
+  - SonarCloud configuration and CI integration
+- Still required for final report evidence:
+  - SonarCloud dashboard screenshot
+  - Cloud IAM / network restriction screenshots from provider console
+
+6. Project Report Requirements
+- Shared architecture diagram: Covered by group report (StayEase_Group_Report.pdf). Ensure final submitted report includes the diagram image/figure.
+- Service description and rationale: Covered in 9.1 and 9.2.
+- Inter-service communication explanation: Covered in 9.4 with flow details.
+- DevOps and security overview: Covered in 9.5 and 9.6.
+- Challenges and resolutions: Covered in 9.7.
+
+7. Demonstration Requirements (10 minutes)
+- Working prototype: Locally validated, cloud run proof pending screenshot capture.
+- Live inter-service communication: Smoke flow validated (payment create/fetch/notify/history/refund).
+- CI/CD walkthrough: Workflows implemented; capture a successful run screen.
+- Security explanation: Implemented and validated with 401/403 negative-path checks.
+
+Final Statement
+
+This individual report content now satisfies the assignment structure and technical explanation requirements. To reach full submission readiness, append final cloud execution evidence (deployment URL, CI/CD run screenshots, SonarCloud dashboard, and cloud security screenshots) before final report submission.

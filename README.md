@@ -9,6 +9,7 @@ This service is Student 4's component in the StayEase microservice system. It ha
 - Issues refunds by booking ID.
 - Sends and stores notification records (email/SMS).
 - Validates user identity through Auth Service.
+ - Supports payment gateway mode (`mock` or `stripe`).
 
 ## 2. How the system works (step by step)
 
@@ -87,6 +88,9 @@ npm install
 - MONGO_URI
 - AUTH_SERVICE_URL
 - INTERNAL_SERVICE_KEY
+- PAYMENT_GATEWAY_MODE
+- STRIPE_SECRET_KEY (required when `PAYMENT_GATEWAY_MODE=stripe`)
+- STRIPE_DEFAULT_PAYMENT_METHOD_ID (optional, default: `pm_card_visa`)
 
 3. Run service:
 ```bash
@@ -263,6 +267,9 @@ docker compose down
 Import this file into Postman:
 - documents/StayEase_Payment_Service.postman_collection.json
 
+Detailed run instructions for backend, frontend, and docker:
+- documents/RUN_GUIDE_BACKEND_FRONTEND_DOCKER.md
+
 Collection variables required:
 - baseUrl
 - token
@@ -317,3 +324,16 @@ Next immediate integration step for teammates:
 - Booking team can now call POST /payments directly with bearer token and booking payload.
 - Auth team must expose GET /auth/verify with userId/id in response.
 - API gateway team can map /payments and /notifications routes to this service base URL.
+
+### Payment gateway modes
+
+- `mock` mode (default): uses simulated payment outcome for local/demo flow.
+- `stripe` mode: uses Stripe Payment Intents and Stripe Refund API.
+
+To enable Stripe mode in `.env`:
+
+```dotenv
+PAYMENT_GATEWAY_MODE=stripe
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_DEFAULT_PAYMENT_METHOD_ID=pm_card_visa
+```

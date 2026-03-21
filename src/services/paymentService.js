@@ -1,19 +1,14 @@
-const crypto = require('crypto');
 const Payment = require('../models/Payment');
 const { sendNotification } = require('./notificationService');
-
-function resolvePaymentStatus() {
-  const randomValue = Math.random();
-  return randomValue < 0.9 ? 'success' : 'failed';
-}
-
-function buildTransactionId() {
-  return `TXN-${crypto.randomUUID()}`;
-}
+const {
+  createGatewayPayment,
+  refundGatewayPayment,
+} = require('./paymentGatewayService');
 
 async function processPayment(payload) {
-  const transactionId = buildTransactionId();
-  const status = resolvePaymentStatus();
+  const gatewayResult = await createGatewayPayment(payload);
+  const transactionId = gatewayResult.transactionId;
+  const status = gatewayResult.status;
 
   const payment = await Payment.create({
     bookingId: payload.bookingId,
@@ -48,6 +43,8 @@ async function refundPayment(bookingId) {
   if (!payment) {
     return null;
   }
+
+  await refundGatewayPayment(payment.transactionId);
 
   payment.status = 'refunded';
   await payment.save();

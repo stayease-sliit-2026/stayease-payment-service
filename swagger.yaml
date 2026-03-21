@@ -116,6 +116,9 @@ components:
           type: number
           format: float
           example: 25000
+        paymentMethodId:
+          type: string
+          example: pm_card_visa
         currency:
           type: string
           example: LKR

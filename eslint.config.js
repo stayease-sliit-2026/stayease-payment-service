@@ -1,10 +1,12 @@
 const js = require('@eslint/js');
 
 module.exports = [
+  {
+    ignores: ['**/node_modules/**', '**/coverage/**', '**/frontend/**'],
+  },
   js.configs.recommended,
   {
     files: ['**/*.js'],
-    ignores: ['node_modules/**', 'coverage/**'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'commonjs',

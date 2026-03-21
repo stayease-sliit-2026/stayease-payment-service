@@ -1,0 +1,157 @@
+openapi: 3.0.3
+info:
+  title: StayEase Payment and Notification Service API
+  version: 1.0.0
+  description: Handles payment processing, refunds, and notifications for StayEase.
+servers:
+  - url: https://stayease-payment-service.<your-cloud-domain>
+  - url: http://localhost:4004
+security:
+  - bearerAuth: []
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Service health check
+      responses:
+        '200':
+          description: Service is healthy
+  /payments:
+    post:
+      tags: [Payments]
+      summary: Process payment for booking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePaymentRequest'
+      responses:
+        '201':
+          description: Payment processed
+        '401':
+          description: Unauthorized
+  /payments/{bookingId}:
+    get:
+      tags: [Payments]
+      summary: Get payment status by booking ID
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Payment found
+        '404':
+          description: Payment not found
+  /payments/refund:
+    post:
+      tags: [Payments]
+      summary: Issue a refund
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefundRequest'
+      responses:
+        '200':
+          description: Refund issued
+        '404':
+          description: Payment not found
+  /notifications/send:
+    post:
+      tags: [Notifications]
+      summary: Send internal notification (email or SMS)
+      security:
+        - internalKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendNotificationRequest'
+      responses:
+        '201':
+          description: Notification sent
+        '403':
+          description: Forbidden
+  /notifications/history:
+    get:
+      tags: [Notifications]
+      summary: Get notification history for a user
+      parameters:
+        - name: userId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Notification history
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    internalKey:
+      type: apiKey
+      in: header
+      name: x-internal-service-key
+  schemas:
+    CreatePaymentRequest:
+      type: object
+      required: [bookingId, userId, amount]
+      properties:
+        bookingId:
+          type: string
+          example: BK1001
+        userId:
+          type: string
+          example: USR1001
+        amount:
+          type: number
+          format: float
+          example: 25000
+        currency:
+          type: string
+          example: LKR
+        contact:
+          type: object
+          properties:
+            channel:
+              type: string
+              enum: [email, sms]
+            destination:
+              type: string
+              example: user@example.com
+    RefundRequest:
+      type: object
+      required: [bookingId]
+      properties:
+        bookingId:
+          type: string
+          example: BK1001
+        reason:
+          type: string
+          example: Customer cancelled booking
+    SendNotificationRequest:
+      type: object
+      required: [userId, bookingId, paymentId, channel, destination, message]
+      properties:
+        userId:
+          type: string
+        bookingId:
+          type: string
+        paymentId:
+          type: string
+        channel:
+          type: string
+          enum: [email, sms]
+        destination:
+          type: string
+        message:
+          type: string

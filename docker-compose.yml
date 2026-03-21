@@ -1,0 +1,24 @@
+services:
+  payment-service:
+    build: .
+    container_name: stayease-payment-service
+    ports:
+      - '4004:4004'
+    environment:
+      PORT: 4004
+      MONGO_URI: mongodb://payment-mongodb:27017/stayease_payment_db
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://host.docker.internal:4001}
+      INTERNAL_SERVICE_KEY: ${INTERNAL_SERVICE_KEY:-replace-this-with-strong-random-value}
+    depends_on:
+      - payment-mongodb
+
+  payment-mongodb:
+    image: mongo:7
+    container_name: stayease-payment-mongodb
+    ports:
+      - '27017:27017'
+    volumes:
+      - payment_mongo_data:/data/db
+
+volumes:
+  payment_mongo_data:

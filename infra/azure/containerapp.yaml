@@ -1,0 +1,36 @@
+location: eastus
+name: stayease-payment-service
+properties:
+  managedEnvironmentId: /subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.App/managedEnvironments/<managed-environment-name>
+  configuration:
+    ingress:
+      external: true
+      targetPort: 4004
+      transport: auto
+      allowInsecure: false
+    secrets:
+      - name: mongo-uri
+        value: <mongodb-atlas-connection-string>
+      - name: auth-service-url
+        value: <auth-service-public-url>
+      - name: internal-service-key
+        value: <strong-internal-service-key>
+  template:
+    containers:
+      - name: stayease-payment-service
+        image: <dockerhub-username>/stayease-payment-service:latest
+        resources:
+          cpu: 0.5
+          memory: 1Gi
+        env:
+          - name: PORT
+            value: "4004"
+          - name: MONGO_URI
+            secretRef: mongo-uri
+          - name: AUTH_SERVICE_URL
+            secretRef: auth-service-url
+          - name: INTERNAL_SERVICE_KEY
+            secretRef: internal-service-key
+    scale:
+      minReplicas: 1
+      maxReplicas: 2

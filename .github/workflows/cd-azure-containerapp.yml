@@ -1,0 +1,56 @@
+name: CD Azure Container Apps
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build-push-deploy:
+    runs-on: ubuntu-latest
+    if: ${{ secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != '' && secrets.AZURE_CREDENTIALS != '' && secrets.AZURE_RESOURCE_GROUP != '' && secrets.AZURE_CONTAINER_APP_NAME != '' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/stayease-payment-service:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/stayease-payment-service:${{ github.sha }}
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to Azure Container Apps
+        uses: azure/container-apps-deploy-action@v2
+        with:
+          resourceGroup: ${{ secrets.AZURE_RESOURCE_GROUP }}
+          containerAppName: ${{ secrets.AZURE_CONTAINER_APP_NAME }}
+          imageToDeploy: ${{ secrets.DOCKERHUB_USERNAME }}/stayease-payment-service:${{ github.sha }}
+          yamlConfigPath: infra/azure/containerapp.yaml
+
+  missing-secrets-notice:
+    runs-on: ubuntu-latest
+    if: ${{ !(secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != '' && secrets.AZURE_CREDENTIALS != '' && secrets.AZURE_RESOURCE_GROUP != '' && secrets.AZURE_CONTAINER_APP_NAME != '') }}
+
+    steps:
+      - name: Missing required secrets
+        run: |
+          echo "CD skipped because required secrets are missing."
+          echo "Required: DOCKERHUB_USERNAME, DOCKERHUB_TOKEN, AZURE_CREDENTIALS, AZURE_RESOURCE_GROUP, AZURE_CONTAINER_APP_NAME"

@@ -1,9 +1,28 @@
 const Notification = require('../models/Notification');
 const { sendNotification } = require('../services/notificationService');
 
+function normalizeNotificationPayload(payload) {
+  const userId = payload.userId;
+  const bookingId = payload.bookingId || payload.referenceId || 'unknown-booking';
+  const paymentId = payload.paymentId || 'unknown-payment';
+  const channel = payload.channel || 'email';
+  const destination = payload.destination || `user:${userId}`;
+  const messageParts = [payload.subject, payload.message].filter(Boolean);
+
+  return {
+    userId,
+    bookingId,
+    paymentId,
+    channel,
+    destination,
+    message: messageParts.join(' - '),
+  };
+}
+
 async function createNotification(req, res, next) {
   try {
-    const notification = await sendNotification(req.body);
+    const notificationPayload = normalizeNotificationPayload(req.body);
+    const notification = await sendNotification(notificationPayload);
 
     return res.status(201).json({
       success: true,
